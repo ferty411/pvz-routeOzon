@@ -41,3 +41,19 @@ func (p *PVZService) AcceptOrder(orderID, customerID string, expireDate time.Tim
 
 	return p.storage.SaveOrder(NewOrder)
 }
+
+func (p *PVZService) ReturnCorier(orderID string) error {
+	order, err := p.storage.GetOrder(orderID)
+	if err != nil {
+		return domain.ErrOrderNotFound
+	}
+
+	if order.Status != domain.StatusAccepted {
+		return domain.ErrInvalidStatus
+	}
+
+	if order.ExiredDate.After(time.Now()) {
+		return domain.ErrValidationFailed
+	}
+	return p.storage.DeleteOrder(orderID)
+}
