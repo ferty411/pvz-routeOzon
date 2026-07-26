@@ -57,3 +57,51 @@ func (p *PVZService) ReturnCorier(orderID string) error {
 	}
 	return p.storage.DeleteOrder(orderID)
 }
+
+func (p *PVZService) IssueOrders(orderIDs []string, customerID string) error {
+	now := time.Now()
+	var ordersToSave []domain.Order
+	for _, ord := range orderIDs {
+		order, err := p.storage.GetOrder(ord)
+		if err != nil {
+			return domain.ErrOrderNotFound
+		}
+		if order.CustomerID != customerID {
+			return domain.ErrValidationFailed
+		}
+		if order.Status != domain.StatusAccepted {
+			return domain.ErrInvalidStatus
+		}
+		if order.ExiredDate.Before(now) {
+			return domain.ErrStorageExpired
+		}
+
+		order.Status = domain.StatusIsseud
+		order.IssuedAt = now
+		order.UpdatedAt = now
+		ordersToSave = append(ordersToSave, order)
+	}
+
+	for _, val := range ordersToSave {
+		if err := p.storage.SaveOrder(val); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *PVZService) ProccessClientAction(action string, customerID string, ordersID []string) error {
+	if len(ordersID) == 0 {
+		return domain.ErrValidationFailed
+	}
+
+	switch action {
+	case "issue":
+		return p.IssueOrders(ordersID, customerID)
+	case "return":
+		return p.ReturnFromClient(ordersID, customerID)
+
+	default:
+		return errors.New("неизвестное действие: используйте 'issue' или 'return'")
+	}
+}
