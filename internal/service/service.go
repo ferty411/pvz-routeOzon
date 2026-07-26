@@ -4,6 +4,7 @@ import (
 	"errors"
 	"pvz/internal/domain"
 	"pvz/internal/storage"
+	"sort"
 	"time"
 )
 
@@ -139,4 +140,47 @@ func (p *PVZService) ProccessClientAction(action string, customerID string, orde
 	default:
 		return errors.New("неизвестное действие: используйте 'issue' или 'return'")
 	}
+}
+
+func (p *PVZService) GetClientOrders(customerID string, lastN int, inPVZOnly bool) ([]domain.Order, error) {
+	allOrders, err := p.storage.GetAllOrders()
+	if err != nil {
+		return nil, err
+	}
+
+	var clientOrders []domain.Order
+
+	for _, order := range allOrders {
+		if order.CustomerID != customerID {
+			continue
+		}
+
+		if inPVZOnly && order.Status != domain.StatusAccepted {
+			continue
+		}
+
+		clientOrders = append(clientOrders, order)
+	}
+
+	sort.Slice(clientOrders, func(i, j int) bool {
+		return clientOrders[i].UpdatedAt.After(clientOrders[j].UpdatedAt)
+	})
+
+	if lastN > 0 && len(clientOrders) > lastN {
+		clientOrders = clientOrders[:lastN]
+	}
+
+	return clientOrders, nil
+}
+
+func (p *PVZService) GetOrderHistory() ([]domain.Order, error) {
+	orders, err := p.storage.GetAllOrders()
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(orders, func(i, j int) bool {
+		return orders[i].UpdatedAt.After(orders[j].UpdatedAt)
+	})
+
+	return orders, nil
 }
