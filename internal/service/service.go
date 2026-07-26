@@ -184,3 +184,40 @@ func (p *PVZService) GetOrderHistory() ([]domain.Order, error) {
 
 	return orders, nil
 }
+
+func (p *PVZService) GetReturnsList(page, limit int) ([]domain.Order, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	}
+
+	allOrders, err := p.storage.GetAllOrders()
+	if err != nil {
+		return nil, err
+	}
+
+	var returns []domain.Order
+	for _, order := range allOrders {
+		if order.Status == domain.StatusReturned {
+			returns = append(returns, order)
+		}
+	}
+	sort.Slice(returns, func(i, j int) bool {
+		return returns[i].UpdatedAt.After(returns[j].UpdatedAt)
+	})
+	start := (page - 1) * limit
+	end := start + limit
+
+	total := len(returns)
+	if start >= total {
+		return []domain.Order{}, nil
+	}
+
+	if end > total {
+		end = total
+	}
+
+	return returns[start:end], nil
+}
