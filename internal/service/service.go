@@ -90,6 +90,41 @@ func (p *PVZService) IssueOrders(orderIDs []string, customerID string) error {
 	return nil
 }
 
+func (p *PVZService) ReturnFromClient(orderIDs []string, customerID string) error {
+	var ordersToSave []domain.Order
+	now := time.Now()
+	for _, id := range orderIDs {
+		order, err := p.storage.GetOrder(id)
+		if err != nil {
+			return err
+		}
+
+		if order.CustomerID != customerID {
+			return domain.ErrOrdersFromDifferentClients
+		}
+
+		if order.Status != domain.StatusIsseud {
+			return domain.ErrInvalidStatus
+		}
+
+		if now.After(order.IssuedAt.Add(48 * time.Hour)) {
+			return domain.ErrReturnPeriodExpired
+		}
+
+		order.Status = domain.StatusReturned
+		order.UpdatedAt = now
+
+		ordersToSave = append(ordersToSave, order)
+	}
+
+	for _, order := range ordersToSave {
+		if err := p.storage.SaveOrder(order); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 func (p *PVZService) ProccessClientAction(action string, customerID string, ordersID []string) error {
 	if len(ordersID) == 0 {
 		return domain.ErrValidationFailed

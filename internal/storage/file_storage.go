@@ -66,3 +66,12 @@ func (fs *FileStorage) SaveOrder(order domain.Order) error {
 	fs.orders[order.OrderID] = order
 	return fs.SaveToFile()
 }
+
+func (fs *FileStorage) GetAllOrders() ([]domain.Order, error) {
+	var list []domain.Order
+
+	for _, order := range fs.orders {
+		list = append(list, order)
+	}
+	return list, nil
+}
