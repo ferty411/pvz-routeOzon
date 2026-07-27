@@ -1,0 +1,19 @@
+# Имя нашего исполняемого файла
+APP_NAME=pvz-app
+
+# Путь до файла main.go (убедись, что путь совпадает с твоей структурой)
+CMD_DIR=./cmd/pvz/main.go
+
+# Указываем, что эти цели не являются файлами
+.PHONY: update build start run
+
+update:
+	go mod tidy
+
+build:
+	go build -o $(APP_NAME) $(CMD_DIR)
+
+start:
+	./$(APP_NAME)
+
+run: update build start
