@@ -18,7 +18,8 @@ func NewPvzService(storage storage.Storage) *PVZService {
 	}
 }
 
-func (p *PVZService) AcceptOrder(orderID,
+func (p *PVZService) AcceptOrder(
+	orderID,
 	customerID string,
 	expiryDate time.Time,
 	weight, price float64,
