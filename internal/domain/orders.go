@@ -94,3 +94,23 @@ func (f *FilmPackaging) GetPrice() float64 {
 func (f *FilmPackaging) ValidateWeight(weight float64) error {
 	return f.Wrapper.ValidateWeight(weight)
 }
+func BuildPackaging(basePrice float64, packTypes []string) (OrderPackeger, error) {
+	var packager OrderPackeger = &BaseOrder{InitialPrice: basePrice}
+
+	for _, pt := range packTypes {
+		pType := PackagingType(pt)
+
+		switch pType {
+		case PackBag:
+			packager = &BagPackaging{Wrapper: packager}
+		case PackBox:
+			packager = &BoxPackaging{Wrapper: packager}
+		case PackFilm:
+			packager = &FilmPackaging{Wrapper: packager}
+		default:
+			return nil, ErrValidationFailed
+		}
+	}
+
+	return packager, nil
+}

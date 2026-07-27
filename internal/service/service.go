@@ -18,8 +18,13 @@ func NewPvzService(storage storage.Storage) *PVZService {
 	}
 }
 
-func (p *PVZService) AcceptOrder(orderID, customerID string, expireDate time.Time) error {
-	if expireDate.Before(time.Now()) {
+func (p *PVZService) AcceptOrder(orderID,
+	customerID string,
+	expiryDate time.Time,
+	weight, price float64,
+	packTypes []string) error {
+
+	if expiryDate.Before(time.Now()) {
 		return domain.ErrStorageExpired
 	}
 
@@ -27,20 +32,34 @@ func (p *PVZService) AcceptOrder(orderID, customerID string, expireDate time.Tim
 	if err == nil {
 		return domain.ErrOrderAlreadyExists
 	}
-
 	if !errors.Is(err, domain.ErrOrderNotFound) {
 		return err
 	}
 
-	NewOrder := domain.Order{
+	packager, err := domain.BuildPackaging(price, packTypes)
+	if err != nil {
+		return err
+	}
+
+	if err := packager.ValidateWeight(weight); err != nil {
+		return err
+	}
+
+	finalPrice := packager.GetPrice()
+
+	newOrder := domain.Order{
 		OrderID:    orderID,
 		CustomerID: customerID,
 		Status:     domain.StatusAccepted,
-		ExiredDate: expireDate,
+		ExiredDate: expiryDate,
 		UpdatedAt:  time.Now(),
+
+		Weight:    weight,
+		Price:     finalPrice,
+		Packaging: packTypes,
 	}
 
-	return p.storage.SaveOrder(NewOrder)
+	return p.storage.SaveOrder(newOrder)
 }
 
 func (p *PVZService) ReturnCorier(orderID string) error {
